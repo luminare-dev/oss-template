@@ -1,4 +1,4 @@
-<!-- header:begin (the project page on luminare.tech drops everything up to header:end; it has its own heading) -->
+<!-- header:begin: the project page on luminare.tech drops this block, because the page has its own heading -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/brand/readme-header-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/brand/readme-header-light.svg">
