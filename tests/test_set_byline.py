@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 import re
-import shutil
 import sys
 import tempfile
 import unittest
@@ -16,17 +15,30 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import set_byline as sb  # noqa: E402
 
-STUDIO_TEXT = "a [Luminare Development](https://luminare.tech/open-source/{{SLUG}}/) open-source project"
-PERSONAL_TEXT = "by {{AUTHOR_NAME}}"
+# Patterns rather than literal text, so the tests keep passing once a repository created from the
+# template has filled its placeholders or switched to the personal byline.
+STUDIO_RE = re.compile(r"^\*a \[Luminare Development\]\(https://luminare\.tech/open-source/[^)]+/\) open-source project\*$",
+                       re.MULTILINE)
+PERSONAL_RE = re.compile(r"^\*by [^*\n]+ · \[project page\]\(https://luminare\.tech/open-source/[^)]+/\)\*$", re.MULTILINE)
+IS_TEMPLATE = "template-only:begin" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+STUDIO_NOTICE = 'demo\n\nThe names "Luminare Development" and "Luminare", the Luminare logo and mark,\nare not licensed.\n'
+NEUTRAL_NOTICE = "demo\n\nThe name and logo of this project are not licensed.\n"
+
+
+def studio_readme() -> str:
+    return sb.set_mode((ROOT / "README.md").read_text(encoding="utf-8"), "studio")
 
 
 def copy_template() -> Path:
-    """A copy of the files set_byline reads, so the tests never touch the repository."""
+    """A studio-mode copy of the files set_byline reads, so the tests never touch the repository
+    and do not depend on the mode this repository is in."""
     tmp = Path(tempfile.mkdtemp(prefix="byline-test-"))
-    shutil.copy2(ROOT / "README.md", tmp / "README.md")
-    shutil.copy2(ROOT / "NOTICE", tmp / "NOTICE")
+    (tmp / "README.md").write_text(studio_readme(), encoding="utf-8")
+    (tmp / "NOTICE").write_text(STUDIO_NOTICE, encoding="utf-8")
     (tmp / "docs" / "brand").mkdir(parents=True)
-    shutil.copy2(ROOT / "docs" / "brand" / "KIT_VERSION", tmp / "docs" / "brand" / "KIT_VERSION")
+    (tmp / "docs" / "brand" / "KIT_VERSION").write_text("untagged+test\nvariant: studio\n", encoding="utf-8")
     return tmp
 
 
@@ -41,6 +53,7 @@ class TemplateReadmeTest(unittest.TestCase):
     def setUp(self):
         self.text = (ROOT / "README.md").read_text(encoding="utf-8")
 
+    @unittest.skipUnless(IS_TEMPLATE, "only the template itself must stay in studio mode")
     def test_default_mode_is_studio(self):
         self.assertEqual(sb.current_mode(self.text), "studio")
 
@@ -50,9 +63,9 @@ class TemplateReadmeTest(unittest.TestCase):
         self.assertEqual(sorted(b.group("kind") for b in blocks), ["personal", "personal", "studio", "studio"])
 
     def test_studio_mode_renders(self):
-        visible = sb.visible_text(self.text)
-        self.assertEqual(visible.count(STUDIO_TEXT), 2)
-        self.assertNotIn(PERSONAL_TEXT, visible)
+        visible = sb.visible_text(sb.set_mode(self.text, "studio"))
+        self.assertEqual(len(STUDIO_RE.findall(visible)), 2)
+        self.assertEqual(PERSONAL_RE.findall(visible), [])
         self.assertIn("<picture>", visible)
         self.assertIn("docs/brand/readme-header-dark.svg", visible)
 
@@ -60,12 +73,14 @@ class TemplateReadmeTest(unittest.TestCase):
         personal = sb.set_mode(self.text, "personal")
         self.assertEqual(sb.current_mode(personal), "personal")
         visible = sb.visible_text(personal)
-        self.assertEqual(visible.count(PERSONAL_TEXT), 2)
+        self.assertEqual(len(PERSONAL_RE.findall(visible)), 2)
         self.assertNotIn("Luminare Development", visible)
         self.assertIn("<picture>", visible)
 
     def test_round_trip_is_lossless(self):
-        self.assertEqual(sb.set_mode(sb.set_mode(self.text, "personal"), "studio"), self.text)
+        mode = sb.current_mode(self.text)
+        other = "personal" if mode == "studio" else "studio"
+        self.assertEqual(sb.set_mode(sb.set_mode(self.text, other), mode), self.text)
 
     def test_comments_stay_balanced_in_both_modes(self):
         for mode in sb.MODES:
@@ -78,7 +93,7 @@ class TemplateReadmeTest(unittest.TestCase):
             self.assertNotIn("-->", stripped, mode)
 
     def test_only_byline_lines_change(self):
-        personal = sb.set_mode(self.text, "personal")
+        personal = sb.set_mode(sb.set_mode(self.text, "studio"), "personal")
         changed = [(a, b) for a, b in zip(self.text.splitlines(), personal.splitlines()) if a != b]
         self.assertEqual(len(self.text.splitlines()), len(personal.splitlines()))
         for a, b in changed:
@@ -135,17 +150,14 @@ class CliTest(unittest.TestCase):
 
         code, out = quiet(sb.main, ["studio", "--root", str(tmp)])
         self.assertEqual(code, 0)
-        self.assertEqual((tmp / "README.md").read_text(encoding="utf-8"),
-                         (ROOT / "README.md").read_text(encoding="utf-8"))
+        self.assertEqual((tmp / "README.md").read_text(encoding="utf-8"), studio_readme())
 
     def test_verify_passes_after_a_complete_swap(self):
         tmp = copy_template()
         quiet(sb.main, ["personal", "--root", str(tmp)])
         kv = tmp / "docs" / "brand" / "KIT_VERSION"
         kv.write_text(kv.read_text(encoding="utf-8").replace("variant: studio", "variant: neutral"), encoding="utf-8")
-        notice = tmp / "NOTICE"
-        notice.write_text(re.sub(r'The names "Luminare Development" and "Luminare", the Luminare logo and mark,\n', "",
-                                 notice.read_text(encoding="utf-8")), encoding="utf-8")
+        (tmp / "NOTICE").write_text(NEUTRAL_NOTICE, encoding="utf-8")
         code, out = quiet(sb.main, ["verify", "--root", str(tmp), "--expect", "personal"])
         self.assertEqual(code, 0, out)
 
