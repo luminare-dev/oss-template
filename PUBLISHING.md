@@ -5,7 +5,7 @@ new repository from this template, part B is the gate itself, part C covers each
 part D the upkeep. Copy part B into the pull request or issue that makes the repository public,
 tick every box, and note the date. A box that cannot be ticked stops the publication.
 
-Facts and links in this file were checked on 2026-10-06.
+Facts and links in this file were checked on 2026-10-06 (A7 and B17 on 2026-10-07).
 
 ## A. Set up a new repository from the template
 
@@ -24,7 +24,9 @@ Facts and links in this file were checked on 2026-10-06.
       `AUTHOR_NAME` and `YEAR` placeholders in `NOTICE`. Check with
       `python3 scripts/set_byline.py verify --expect studio`.
 - [ ] **A4 Licence.** Follow [licenses/CHOOSING.md](licenses/CHOOSING.md): `LICENSE`, the README's
-      licence line, then remove the unused texts in `licenses/`.
+      licence line, then remove the unused texts in `licenses/`. Always copy `LICENSE` fresh from
+      `licenses/` with the year of first publication, even when MIT is kept: the template's own
+      `LICENSE` carries the template's year.
 - [ ] **A5 Release files.** Keep `CHANGELOG.md` (seed with the "Origin" entry),
       `.release-please-manifest.json` (`{}`), `version.txt` (`0.0.0`) and
       `release-please-config.json` (`initial-version` `0.1.0`) as they are.
@@ -39,6 +41,10 @@ Facts and links in this file were checked on 2026-10-06.
     import the ruleset only after each check has run once on a pull request.
   - Settings → Actions → General: *Allow GitHub Actions to create and approve pull requests* on
     (release-please opens the release pull request with `GITHUB_TOKEN`).
+  - Allowed actions (organization or repository): actions created by GitHub (`actions/*`,
+    `github/*`) plus only the third-party actions these workflows use, each pinned by SHA:
+    `DavidAnson/markdownlint-cli2-action`, `googleapis/release-please-action` and
+    `ossf/scorecard-action`.
   - Settings → General → Releases: immutable releases on. The release workflow creates a draft,
     attaches every file and publishes last, so it works with immutable releases.
 - [ ] **A8 Local run.** All commands in part E pass.
@@ -62,13 +68,16 @@ Facts and links in this file were checked on 2026-10-06.
       `2001:db8::/32`. Helpful searches:
       `git grep -nE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'` (IPv4),
       `git grep -nEi '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'` (GUIDs, tenant
-      IDs) and a look at every image in the repository.
+      IDs) and a look at every image in the repository. No FXServer artifacts, game files or
+      Rockstar assets in the repository or in release archives; link to the official downloads
+      instead.
 - [ ] **B4 Names.** Repository name, Galaxy namespace and collection name, package names, a
       GitHub Action name and grafana.com dashboard titles carry no platform or vendor mark:
       never FiveM, Cfx, CitizenFX, RedM, txAdmin, GTA, Rockstar, Take-Two or an FX… coinage, and
       no Proxmox, Windows, Microsoft, Prometheus, Grafana or similar as the name. "… for
       FiveM/RedM servers (FXServer)" belongs in the description and topics only. Galaxy
       collection names and versions and grafana.com titles are **permanent**: decide them once.
+      The Galaxy namespace is `luminare` (fallback `luminare_dev` if Galaxy does not grant it).
       The name check in `scripts/forbidden_words.py` is green; a registry convention such as
       `ansible-collection-<name>` needs an `@name` line in `.forbidden-words-allow`.
 - [ ] **B5 Byline.** The studio byline "a Luminare Development open-source project" with the link
@@ -79,9 +88,12 @@ Facts and links in this file were checked on 2026-10-06.
 - [ ] **B6 Wording check green in publish mode.** `python3 scripts/forbidden_words.py` (without
       `--template-mode`) reports 0 findings: no offer, price, funding or store wording in English <!-- rule-text -->
       or German, no unfilled placeholder, no template hint, no private e-mail address. Review every
-      entry in `.forbidden-words-allow` and every line marked `rule-text` (both are counted in
-      the summary line). Also run it once with the maintainer's private term list:
-      `--extra-terms <private list outside the repository>`.
+      entry in `.forbidden-words-allow` and every line that ends with a `rule-text` comment (both
+      are counted in the summary line). Also run it once with the maintainer's private term list:
+      `--extra-terms <private list outside the repository>`. The commit history is public too:
+      `git log --all --format='%an <%ae>%n%cn <%ce>%n%B' | python3 scripts/forbidden_words.py --stdin --extra-terms <private list>`
+      reports 0 findings for every commit message and author line; otherwise reword those
+      commits before the first push, or publish with a fresh history.
 - [ ] **B7 Sponsorships off, no funding file.** Settings → General → Features: *Sponsorships* <!-- rule-text -->
       unticked. No `FUNDING.yml` anywhere; the check fails on one, and the organization's <!-- rule-text -->
       `.github` repository has none either.
@@ -119,13 +131,17 @@ Facts and links in this file were checked on 2026-10-06.
     licence token to get or run it);
   - links only of the allowed kinds: GitHub, documentation, support site, Discord (support only,
     never for delivery), video platforms such as YouTube, dependencies; no other social media
-    and nothing outside that list;
+    and nothing outside that list, in particular no donation or sponsor links; <!-- rule-text -->
   - the "free" tag and topic tags, a complete description written by hand (the forum rejects
     pasted language-model output), a demo video or screenshots (first image uploaded to the
     forum), resource monitor numbers or a profiler screenshot;
   - code quality: no `GetPlayerPed(-1)`, no `__resource.lua`, not a single file under 50 lines;
   - at most one release topic per 48 hours; the account has trust level 1;
   - the title follows the pattern `<name> for FiveM`, and the post carries the not-affiliated line.
+- [ ] **B17 Link targets are live.** The project page `https://luminare.tech/open-source/<slug>/`
+      (byline, README links and the website field from B9) answers with HTTP 200, and the
+      organization's `luminare-dev/.github` repository is public, so the README's contributing,
+      conduct, security and support links work. Until both hold, publication waits.
 
 ## C. Every release
 
@@ -133,6 +149,8 @@ Facts and links in this file were checked on 2026-10-06.
       pull request (`chore(main): release X.Y.Z`) up to date.
 - [ ] Before merging the release pull request, **close and reopen it** once: pull requests opened
       with `GITHUB_TOKEN` do not start workflows, so the required checks would never report.
+- [ ] Before merging the release pull request, the commit history check from B6 (with the
+      private term list) still reports 0 findings.
 - [ ] After the merge, the `release` workflow creates the draft release and the tag, builds
       `<slug>-X.Y.Z.tar.gz` with `SHA256SUMS`, attests the archive and publishes the release.
       Verify it from outside with the commands below this list.
@@ -166,6 +184,7 @@ environment; `gitleaks`, `actionlint` and `markdownlint-cli2` on the `PATH`.
 
 ```bash
 python3 scripts/forbidden_words.py                    # publish mode (template mode: --template-mode)
+git log --all --format='%an <%ae>%n%cn <%ce>%n%B' | python3 scripts/forbidden_words.py --stdin
 python3 scripts/set_byline.py verify --expect studio
 python3 scripts/check_workflows.py --list
 python3 -m unittest discover -s tests -v

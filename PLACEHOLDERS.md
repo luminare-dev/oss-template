@@ -9,18 +9,18 @@ list doubles as the fill-in checklist (about 20 minutes for the README).
 
 | Placeholder | Where | Fill with |
 |---|---|---|
-| `{{SLUG}}` | `README.md` (badges, links, byline) | The repository name, which is also the project page slug: `https://luminare.tech/open-source/<slug>/`. Lower case, hyphens, no platform names. |
+| `{{SLUG}}` | `README.md` (badges, links, byline), `docs/install.md` | The repository name, which is also the project page slug: `https://luminare.tech/open-source/<slug>/`. Lower case, hyphens, no platform names. |
 | `{{PROJECT_TITLE}}` | `README.md` (title, header alt text, diagram) | The display name. Neutral: no FiveM, Cfx, RedM, txAdmin, GTA, Rockstar, FX… coinage, and no vendor mark such as Proxmox, Windows, Prometheus or Grafana. |
 | `{{ONE_LINE_PURPOSE}}` | `README.md` | One sentence: what it does and for whom. "… for FiveM/RedM servers (FXServer)" is allowed here, never in the name. |
 | `{{PROBLEM_STATEMENT}}` | `README.md` (Why) | 2–4 sentences on the problem and what the project shows. |
-| `{{QUICKSTART_COMMANDS}}` | `README.md` (Quickstart) | At most five commands, tested on a clean machine. |
+| `{{QUICKSTART_COMMANDS}}` | `README.md` (Quickstart), `docs/install.md` | At most five commands, tested on a clean machine. |
 | `{{TARGET_SYSTEM}}` | `README.md` (diagram) | What the project acts on, for example "Ubuntu 24.04 host". |
-| `{{COMPONENT}}`, `{{TESTED_VERSION}}`, `{{SUPPORTED_RANGE}}` | `README.md` (Supported versions) | One row per runtime or dependency that matters. |
+| `{{COMPONENT}}`, `{{TESTED_VERSION}}`, `{{SUPPORTED_RANGE}}` | `README.md` (Supported versions); `{{COMPONENT}}` and `{{SUPPORTED_RANGE}}` also in `docs/install.md` | One row per runtime or dependency that matters. |
 | `{{LIMITATION}}` | `README.md` (Limitations) | One bullet per limitation. |
 | `{{RESULT}}`, `{{VALUE}}`, `{{METHOD}}` | `README.md` (Results) | Measured numbers with method and date. |
 | `{{SPDX_ID}}` | `README.md` (Licence) | The SPDX id of the chosen licence (`Apache-2.0`, `MIT`), see [licenses/CHOOSING.md](licenses/CHOOSING.md). |
 | `{{AUTHOR_NAME}}` | `LICENSE` and `NOTICE` (copyright line); the inactive personal byline in `README.md` | The copyright holder, a natural person, in the same form in every repository. |
-| `{{YEAR}}` | `LICENSE` and `NOTICE` of a new repository (copied from `licenses/` and brand-repos) | The year of first publication. |
+| `{{YEAR}}` | `LICENSE` and `NOTICE` of a new repository (copied from `licenses/` and brand-repos) | The year of first publication. `LICENSE` is always copied fresh from `licenses/`, even when MIT is kept: the template's own `LICENSE` carries the template's year, and no check notices a wrong year. |
 | `{{VERSION}}` | `docs/upgrade.md` | The version an upgrade note applies to. |
 
 ## Values to check, not placeholders

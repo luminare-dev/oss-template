@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import shutil
 import sys
 import tempfile
 import unittest
@@ -19,6 +20,7 @@ SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
 
 def workflow(body: str, top: str = "permissions: {}\n") -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="wf-test-"))
+    unittest.addModuleCleanup(shutil.rmtree, tmp, ignore_errors=True)
     (tmp / ".github" / "workflows").mkdir(parents=True)
     (tmp / ".github" / "workflows" / "w.yml").write_text("name: w\non: push\n" + top + "jobs:\n" + body,
                                                          encoding="utf-8")

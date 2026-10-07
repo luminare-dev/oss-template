@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -31,10 +32,17 @@ def studio_readme() -> str:
     return sb.set_mode((ROOT / "README.md").read_text(encoding="utf-8"), "studio")
 
 
+def temp_dir() -> Path:
+    """A temporary folder that is removed when the tests of this module are done."""
+    tmp = Path(tempfile.mkdtemp(prefix="byline-test-"))
+    unittest.addModuleCleanup(shutil.rmtree, tmp, ignore_errors=True)
+    return tmp
+
+
 def copy_template() -> Path:
     """A studio-mode copy of the files set_byline reads, so the tests never touch the repository
     and do not depend on the mode this repository is in."""
-    tmp = Path(tempfile.mkdtemp(prefix="byline-test-"))
+    tmp = temp_dir()
     (tmp / "README.md").write_text(studio_readme(), encoding="utf-8")
     (tmp / "NOTICE").write_text(STUDIO_NOTICE, encoding="utf-8")
     (tmp / "docs" / "brand").mkdir(parents=True)
@@ -166,8 +174,18 @@ class CliTest(unittest.TestCase):
         code, _ = quiet(sb.main, ["status", "--root", str(tmp), "--expect", "personal"])
         self.assertEqual(code, 1)
 
+    def test_verify_expect_prints_the_steps_for_the_expected_mode(self):
+        tmp = copy_template()
+        code, out = quiet(sb.main, ["verify", "--root", str(tmp), "--slug", "demo", "--expect", "personal"])
+        self.assertEqual(code, 1)
+        self.assertIn("README byline is studio, expected personal", out)
+        self.assertIn("run: python3 scripts/set_byline.py personal", out)
+        self.assertIn("Brand files for 'personal'", out)
+        self.assertIn("brand-repos/out/demo/neutral/", out)
+        self.assertNotIn("/studio/", out)
+
     def test_malformed_exit_code(self):
-        tmp = Path(tempfile.mkdtemp(prefix="byline-test-"))
+        tmp = temp_dir()
         (tmp / "README.md").write_text("# no markers\n", encoding="utf-8")
         err = io.StringIO()
         old, sys.stderr = sys.stderr, err

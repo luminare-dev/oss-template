@@ -4,7 +4,8 @@
 #
 # * The glob is matched against the path from the repository root; "*" also crosses folders.
 # * The term is a rule id (python3 scripts/forbidden_words.py --list-rules), the exact matched
-#   text (for example one store domain), "placeholder", "template-hint" or "*" (any rule).
+#   text (for example one store domain), "placeholder", "template-hint", "email" or "*" (any rule
+#   except "email"). Terms from the private list (--extra-terms) can never be excused.
 # * "@name" as the path covers the name check (repository, package and README title names).
 # * Every entry needs a reason a reviewer can check. Scope entries to data or UI files, or to the
 #   one domain the project really links to. A funding file can never be allowlisted.

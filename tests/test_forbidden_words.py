@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,9 +19,22 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import forbidden_words as fw  # noqa: E402
 
 
+# Test addresses are built at run time, so the e-mail check still covers this file (an
+# allowlist entry here would also let a real address through).
+AT = "@"
+PRIVATE_ADDRESS = "someone.private" + AT + "gmail.com"
+
+
+def temp_dir(prefix: str = "fw-test-") -> Path:
+    """A temporary folder that is removed when the tests of this module are done."""
+    tmp = Path(tempfile.mkdtemp(prefix=prefix))
+    unittest.addModuleCleanup(shutil.rmtree, tmp, ignore_errors=True)
+    return tmp
+
+
 def make_repo(files: dict[str, str | bytes], allow: str | None = None) -> Path:
     """A throw-away folder (not a git repository, so the folder walk is used)."""
-    tmp = Path(tempfile.mkdtemp(prefix="fw-test-"))
+    tmp = temp_dir()
     for rel, content in files.items():
         p = tmp / rel
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -100,6 +114,54 @@ class WordingRulesTest(unittest.TestCase):
             with self.subTest(rule_id=rule_id):
                 self.assertHit(text, rule_id)
 
+    def test_german_compounds_and_phrasings(self):
+        cases = [
+            ("de-donate", "Spendenkonto"), ("de-donate", "Spendenaktion"), ("de-donate", "Spendenseite"),
+            ("de-donate", "Spendenlink"), ("de-donate", "Unterstützen Sie uns"),
+            ("de-price", "Einführungspreis"), ("de-price", "Sonderpreis"), ("de-price", "Festpreis"),
+            ("de-price", "Kaufpreis"), ("de-price", "Preismodell"), ("de-price", "Preisvorteil"),
+            ("de-price", "Abonnement"), ("de-shop", "Produktlinie"), ("de-shop", "Store-Seite"),
+            ("de-ads", "Partnerprogramm"), ("de-buy", "Bezahlversion"), ("de-buy", "kauf jetzt"),
+        ]
+        for rule_id, text in cases:
+            with self.subTest(text=text):
+                self.assertHit(text, rule_id)
+
+    def test_funding_and_offer_gaps(self):
+        cases = [
+            ("funding", "crowdfunding"), ("funding-platform", "Kickstarter"), ("funding-platform", "Indiegogo"),
+            ("funding-platform", "steadyhq.com/x"), ("funding-platform", "flattr.com"),
+            ("funding-platform", "donorbox.org"), ("funding-platform", "checkout.stripe.com/x"),
+            ("funding-platform", "revolut.me/x"), ("donate", "support us"),
+            ("commercial-licence", "licensing options available"), ("paid-support", "Enterprise support"),
+        ]
+        for rule_id, text in cases:
+            with self.subTest(text=text):
+                self.assertHit(text, rule_id)
+
+    def test_phrases_broken_across_lines(self):
+        for rule_id, text in (("pro-version", "the pro\nversion"), ("coming-soon", "coming\n  soon"),
+                              ("availability", "available for\nprojects"), ("de-commission", "Preis auf\nAnfrage")):
+            with self.subTest(text=text):
+                self.assertHit(text, rule_id)
+        found = hits("line one\nthe pro\nversion")
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("<stdin>:2:5: [pro-version]", found[0])  # reported once, on the line it starts
+
+    def test_unicode_and_entity_evasions(self):
+        cases = [
+            ("mixed-script", "pr\u0456ce list"),          # Cyrillic i
+            ("price", "pri\u200bce list"),                # zero-width space
+            ("price", "\uff50\uff52\uff49\uff43\uff45"),  # full-width letters
+            ("pro-version", "pro\u2011version"),          # non-breaking hyphen
+            ("currency", "&#8364; 5"), ("currency", "&#x20AC; 5"), ("currency", "5EUR"),
+            ("product-path", "https://luminare.tech/store"), ("product-path", "https://luminare.tech/products/"),
+            ("product-path", "https://luminare.tech/services/"),
+        ]
+        for rule_id, text in cases:
+            with self.subTest(text=text):
+                self.assertHit(text, rule_id)
+
     def test_domains_and_hosts(self):
         self.assertHit("https://example.tebex.io/package/1", "store-domain")
         self.assertHit("https://ko-fi.com/someone", "funding-platform")
@@ -107,7 +169,8 @@ class WordingRulesTest(unittest.TestCase):
         self.assertHit("https://patreon.com/x", "funding-platform")
         self.assertHit("https://play.google.com/store/apps/details?id=x", "store-domain")
         self.assertHit("docs live on scripts.example.tech", "product-host")
-        self.assertHit("store.example.com", "product-host")
+        self.assertHit("store.example-studio.com", "product-host")
+        self.assertClean("store.example.com and https://example.com/products")  # reserved example domains
 
     def test_case_insensitive(self):
         self.assertHit("PRO VERSION", "pro-version")
@@ -129,6 +192,12 @@ class WordingRulesTest(unittest.TestCase):
             "open a pull request",                      # "request"
             "workshop notes",                           # "shop" inside a word
             "a buyer persona",                          # "buy" inside a word
+            "die Preisgabe von Daten",                  # "Preisgabe" vs "Preis"
+            "the job stays suspended",                  # "spende" inside an English word
+            "120 µs latency, Δt = 5 s",                 # Greek letters that look unlike Latin ones
+            "Grüße, naïve café",                        # accented Latin letters
+            "support us-east-1 and eu-west-1",          # a region name, not "support us"
+            "curl 'https://x.example/?a=1&notify=1'",   # an entity without ";" stays as it is
         ):
             with self.subTest(text=text):
                 self.assertClean(text)
@@ -151,6 +220,36 @@ class RepositoryScanTest(unittest.TestCase):
         report = run(root)
         self.assertEqual(report.errors, [])
         self.assertEqual(report.rule_text_lines, 1)
+
+    def test_rule_text_marker_as_yaml_comment(self):
+        root = make_repo({"ci.yml": "- name: Forbidden words, funding file  # rule-text\n"})
+        report = run(root)
+        self.assertEqual(report.errors, [])
+        self.assertEqual(report.rule_text_lines, 1)
+
+    def test_rule_text_only_as_end_of_line_comment(self):
+        for line in ("Buy the pro version now rule-text",                       # the word in prose
+                     "[shop](https://example.tebex.io) see /docs/rule-text.md",  # in a path
+                     "prices: https://x.example/rule-texts",                     # in a URL
+                     "<!-- rule-text --> buy now",                               # not at the end
+                     "buy now #rule-text-ish"):
+            with self.subTest(line=line):
+                report = run(make_repo({"a.md": line + "\n"}))
+                self.assertTrue(report.errors, line)
+                self.assertEqual(report.rule_text_lines, 0)
+
+    def test_rule_text_does_not_excuse_private_terms(self):
+        root = make_repo({"a.md": "Jane Example wrote this <!-- rule-text -->\n"})
+        extra = temp_dir() / "private.txt"
+        extra.write_text("text jane\\s+example\n", encoding="utf-8")
+        self.assertEqual(len(run(root, extra_terms=extra).errors), 1)
+
+    def test_file_paths_are_checked(self):
+        root = make_repo({"docs/pricing.md": "ok\n", "docs/donate.md": "ok\n", "docs/install.md": "ok\n"})
+        errors = run(root).errors
+        self.assertEqual(len(errors), 2, errors)
+        self.assertTrue(any(e.startswith("docs/pricing.md: [price]") for e in errors), errors)
+        self.assertTrue(any(e.startswith("docs/donate.md: [donate]") for e in errors), errors)
 
     def test_binary_files_are_skipped(self):
         root = make_repo({"img.png": b"\x89PNG\0buy now", "data.bin": b"\0\0buy now"})
@@ -204,6 +303,17 @@ class AllowlistTest(unittest.TestCase):
         report = run(root)
         self.assertEqual(report.errors, [])
         self.assertTrue(any("matched nothing" in w for w in report.warnings))
+
+    def test_star_does_not_excuse_addresses_or_private_terms(self):
+        root = make_repo({"tests/test_x.py": f"ADDRESS = '{PRIVATE_ADDRESS}'  # Jane Example\n"},
+                         allow="tests/test_x.py | * | test sentences that must trigger the rules\n"
+                               "tests/test_x.py | extra-1 | trying to excuse a private term anyway\n")
+        extra = temp_dir() / "private.txt"
+        extra.write_text("text jane\\s+example\n", encoding="utf-8")
+        errors = run(root, extra_terms=extra).errors
+        self.assertEqual(len(errors), 2, errors)
+        self.assertTrue(any("[email]" in e for e in errors), errors)
+        self.assertTrue(any("[extra-1]" in e for e in errors), errors)
 
     def test_name_pseudo_path(self):
         root = make_repo({"README.md": "x\n"}, allow="@name | ansible | registry naming convention for collections\n")
@@ -283,7 +393,7 @@ class PlaceholderTest(unittest.TestCase):
 
 class EmailTest(unittest.TestCase):
     def test_private_address_fails(self):
-        root = make_repo({"docs/a.md": "Write to someone.private@gmail.com for help\n"})
+        root = make_repo({"docs/a.md": f"Write to {PRIVATE_ADDRESS} for help\n"})
         errors = run(root).errors
         self.assertEqual(len(errors), 1)
         self.assertIn("[email]", errors[0])
@@ -292,11 +402,12 @@ class EmailTest(unittest.TestCase):
         root = make_repo({"docs/a.md": "security@luminare.tech, oss@luminare.tech, conduct@luminare.tech, "
                                        "76869048+someone@users.noreply.github.com, you@example.com, "
                                        "test@example.invalid, git clone git@github.com:o/r.git, "
-                                       "actions/checkout@v7 and pkg@1.2.3\n"})
+                                       "actions/checkout@v7 and pkg@1.2.3\n"
+                                       f"Co-Authored-By: A Tool <noreply{AT}vendor.example-tool.com>\n"})
         self.assertEqual(run(root).errors, [])
 
     def test_email_allowlist(self):
-        root = make_repo({"a.md": "upstream maintainer: maintainer@upstream.org\n"},
+        root = make_repo({"a.md": f"upstream maintainer: maintainer{AT}upstream.org\n"},
                          allow="a.md | email | the upstream project's published contact address\n")
         self.assertEqual(run(root).errors, [])
 
@@ -304,13 +415,13 @@ class EmailTest(unittest.TestCase):
 class ExtraTermsTest(unittest.TestCase):
     def test_private_extra_terms(self):
         root = make_repo({"a.md": "Contact Jane Example at the office\n"})
-        extra = Path(tempfile.mkdtemp()) / "private.txt"
+        extra = temp_dir() / "private.txt"
         extra.write_text("# private list\ntext jane\\s+example\nname secret-codename\n", encoding="utf-8")
         report = run(root, extra_terms=extra, repo_name="secret-codename-tool")
         self.assertEqual(len(report.errors), 2, report.errors)
 
     def test_bad_extra_line(self):
-        extra = Path(tempfile.mkdtemp()) / "private.txt"
+        extra = temp_dir() / "private.txt"
         extra.write_text("jane\n", encoding="utf-8")
         with self.assertRaises(fw.ConfigError):
             fw.load_extra_terms(extra)

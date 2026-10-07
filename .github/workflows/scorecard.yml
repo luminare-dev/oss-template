@@ -15,6 +15,9 @@ permissions: {}
 
 jobs:
   scorecard:
+    # Private repositories (part A of PUBLISHING.md, until the gate passes) are skipped: the action
+    # and the code-scanning upload need GitHub Advanced Security there.
+    if: ${{ !github.event.repository.private }}
     uses: ./.github/workflows/reusable-scorecard.yml
     permissions:
       contents: read           # read the repository

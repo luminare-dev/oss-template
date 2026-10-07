@@ -40,9 +40,9 @@ def problems(title: str) -> list[str]:
             out.append(f"type {m.group('type')!r} is not one of: {', '.join(TYPES)}")
         subject = m.group("subject")
         if subject.endswith("."):
-            out.append("the summary does not end with a full stop")
+            out.append("the summary must not end with a full stop")
         if subject[:1].isupper() and not subject.split()[0].isupper():
-            out.append("the summary starts with a lower-case letter (imperative mood: 'add', 'fix')")
+            out.append("the summary must start with a lower-case letter (imperative mood: 'add', 'fix')")
     if len(title) > MAX_LENGTH:
         out.append(f"the title is {len(title)} characters long; keep it to {MAX_LENGTH}")
     out += [f"wording: {e.split(': ', 1)[-1]}" for e in check_string(title)]

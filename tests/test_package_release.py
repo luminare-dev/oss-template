@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -21,7 +22,9 @@ def git(repo: Path, *args: str) -> None:
 
 
 def scratch_repo() -> Path:
-    repo = Path(tempfile.mkdtemp(prefix="pkg-test-")) / "demo-project"
+    tmp = Path(tempfile.mkdtemp(prefix="pkg-test-"))
+    unittest.addModuleCleanup(shutil.rmtree, tmp, ignore_errors=True)
+    repo = tmp / "demo-project"
     repo.mkdir()
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.name", "Test")

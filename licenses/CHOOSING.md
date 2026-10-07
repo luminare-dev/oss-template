@@ -24,7 +24,8 @@ code. Never copy GPL-licensed code into an MIT or Apache-2.0 repository.
 
 ## How to apply it in a new repository
 
-1. **LICENSE.** Copy the chosen file to `LICENSE` in the repository root.
+1. **LICENSE.** Copy the chosen file to `LICENSE` in the repository root. Do this in every new
+   repository, even when MIT is kept: the template's own `LICENSE` carries the template's year.
    - MIT: replace `<year> <copyright holders>` in the copyright line with the year of first
      publication and the copyright holder, in the same form as in `NOTICE`.
    - Apache-2.0: copy the text unchanged, including the appendix. The copyright line goes into
