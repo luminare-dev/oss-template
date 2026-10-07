@@ -21,8 +21,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from forbidden_words import check_string  # noqa: E402
 
-# The types of the organization's CONTRIBUTING guide, plus "security" for the changelog's
-# Security section (release-please-config.json maps the types to Keep a Changelog sections).
+# The types of the organization's CONTRIBUTING guide (release-please-config.json maps them to
+# Keep a Changelog sections).
 TYPES = ("feat", "fix", "docs", "refactor", "perf", "test", "style", "build", "ci", "chore", "revert", "security")
 TITLE_RE = re.compile(r"^(?P<type>[a-z]+)(?:\((?P<scope>[a-z0-9][a-z0-9._/-]*)\))?(?P<bang>!)?: (?P<subject>\S.*)$")
 MAX_LENGTH = 100

@@ -22,7 +22,14 @@ Facts and links in this file were checked on 2026-10-06 (A7 and B17 on 2026-10-0
       one-line description, `variant: studio`, licence), run `build_repos.py`, then copy
       `out/<slug>/studio/*` to `docs/brand/` and `out/<slug>/NOTICE` to `NOTICE`. Fill the
       `AUTHOR_NAME` and `YEAR` placeholders in `NOTICE`. Check with
-      `python3 scripts/set_byline.py verify --expect studio`.
+      `python3 scripts/set_byline.py verify --expect studio`. **Ansible collections** (their
+      README is also shown on galaxy.ansible.com): replace the README's whole header block (from
+      the `header:begin` to the `header:end` comment) with `out/<slug>/README-snippet.md`, whose
+      image links are absolute `raw.githubusercontent.com` URLs (Galaxy drops `<picture>` and
+      keeps a relative `<img src>` unchanged, so `docs/brand/…` breaks there), and add
+      `docs/brand` to `build_ignore` in `galaxy.yml`, so the brand files, which the licence does
+      not cover, stay out of the collection artifact. Check the header on Galaxy after the
+      first import.
 - [ ] **A4 Licence.** Follow [licenses/CHOOSING.md](licenses/CHOOSING.md): `LICENSE`, the README's
       licence line, then remove the unused texts in `licenses/`. Always copy `LICENSE` fresh from
       `licenses/` with the year of first publication, even when MIT is kept: the template's own
@@ -107,8 +114,11 @@ Facts and links in this file were checked on 2026-10-06 (A7 and B17 on 2026-10-0
 - [ ] **B10 Release notes are factual.** Release notes come from the pull request titles (the
       `pr / pr-title` check runs the wording check on each title). Read the release body before
       announcing it: what changed and why, nothing else.
-- [ ] **B11 Records.** The repository is added to `repos.json` in the private `oss-metrics`
-      repository (first snapshot within 14 days) and to the maintainer's private artefact list
+- [ ] **B11 Records.** The repository is listed in `repos.json` in the private `oss-metrics`
+      repository with `planned: false` (planned repositories are already there with
+      `planned: true`; add any other), is covered by `METRICS_TOKEN` (when the token uses "Only
+      select repositories", add it to the selection; oss-metrics README, "Setup"), and gets its
+      first snapshot within 14 days. It is also added to the maintainer's private artefact list
       (name, licence, URL, date it became public).
 - [ ] **B12 No unfilled placeholders.** Covered by B6; double-check `NOTICE`, `LICENSE` and the
       ADR dates.
