@@ -19,7 +19,7 @@ list doubles as the fill-in checklist (about 20 minutes for the README).
 | `{{LIMITATION}}` | `README.md` (Limitations) | One bullet per limitation. |
 | `{{RESULT}}`, `{{VALUE}}`, `{{METHOD}}` | `README.md` (Results) | Measured numbers with method and date. |
 | `{{SPDX_ID}}` | `README.md` (Licence) | The SPDX id of the chosen licence (`Apache-2.0`, `MIT`), see [licenses/CHOOSING.md](licenses/CHOOSING.md). |
-| `{{AUTHOR_NAME}}` | `LICENSE` and `NOTICE` (copyright line); the inactive personal byline in `README.md` | The copyright holder, a natural person, in the same form in every repository. |
+| `{{AUTHOR_NAME}}` | the inactive personal byline in `README.md`; `LICENSE` and `NOTICE` of a new repository (copied from `licenses/` and brand-repos) | The copyright holder, a natural person: the full legal name, in the same form in every repository. This template's own `LICENSE` and `NOTICE` already carry it, because the template is published itself. |
 | `{{YEAR}}` | `LICENSE` and `NOTICE` of a new repository (copied from `licenses/` and brand-repos) | The year of first publication. `LICENSE` is always copied fresh from `licenses/`, even when MIT is kept: the template's own `LICENSE` carries the template's year, and no check notices a wrong year. |
 | `{{VERSION}}` | `docs/upgrade.md` | The version an upgrade note applies to. |
 
