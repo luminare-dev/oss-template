@@ -1,4 +1,5 @@
-"""Tests for the lint and scan configuration (.markdownlint-cli2.jsonc, .gitleaks.toml).
+"""Tests for the lint and scan configuration (.markdownlint-cli2.jsonc, .gitleaks.toml) and for the
+guards of the scheduled workflows.
 
 The checks that need markdownlint-cli2 or gitleaks run only where the tool is on the PATH (the
 CI lint-test job has neither; the secrets job scans tests/fixtures/ with every commit).
@@ -7,6 +8,7 @@ CI lint-test job has neither; the secrets job scans tests/fixtures/ with every c
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import shutil
 import string
@@ -17,6 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "tests" / "fixtures"
+WORKFLOWS = ROOT / ".github" / "workflows"
 
 # A release entry as release-please writes it: two blank lines after each version heading.
 RELEASE_PLEASE_ENTRY = (
@@ -34,6 +37,11 @@ def temp_dir(prefix: str) -> Path:
     tmp = Path(tempfile.mkdtemp(prefix=prefix))
     unittest.addModuleCleanup(shutil.rmtree, tmp, ignore_errors=True)
     return tmp
+
+
+def code_lines(path: Path) -> list[str]:
+    """The lines of a workflow file without its comment lines."""
+    return [line for line in path.read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith("#")]
 
 
 def markdownlint_config() -> dict:
@@ -85,6 +93,25 @@ class GitleaksConfigTest(unittest.TestCase):
         (tmp / "txadmin.env").write_text(f"TXHOST_API_TOKEN={secrets.token_hex(16)}\n", encoding="utf-8")
         found = set(self.scan(tmp))
         self.assertTrue({"cfx-server-key", "txadmin-api-token"} <= found, found)
+
+
+class ScheduledWorkflowTest(unittest.TestCase):
+    def test_scheduled_workflows_do_not_read_the_event_repository(self):
+        """The payload of a scheduled run carries no repository, so a guard such as
+        "!github.event.repository.private" is true there: the weekly Scorecard run would not skip a
+        private repository and would fail in it."""
+        scheduled = [p for p in sorted(WORKFLOWS.glob("*.y*ml"))
+                     if any(re.match(r"^\s+schedule:", line) for line in code_lines(p))]
+        self.assertIn(WORKFLOWS / "scorecard.yml", scheduled)
+        for path in scheduled:
+            with self.subTest(path.name):
+                self.assertEqual([line for line in code_lines(path) if "github.event.repository" in line], [])
+
+    def test_scorecard_runs_only_when_the_api_reports_a_public_repository(self):
+        text = "\n".join(code_lines(WORKFLOWS / "scorecard.yml"))
+        self.assertIn("    needs: visibility\n", text)
+        self.assertIn("    if: ${{ needs.visibility.outputs.private == 'false' }}\n", text)
+        self.assertIn('gh api "repos/$GITHUB_REPOSITORY" --jq .private', text)
 
 
 if __name__ == "__main__":
