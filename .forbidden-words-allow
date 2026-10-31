@@ -1,4 +1,4 @@
-# Allowlist for scripts/forbidden_words.py (plan: one reviewed exception per line).
+# Allowlist for scripts/forbidden_words.py, one exception per line.
 #
 #   <path glob> | <rule id, matched text or *> | <reason>
 #
@@ -7,7 +7,7 @@
 #   text (for example one store domain), "placeholder", "template-hint", "email" or "*" (any rule
 #   except "email"). Terms from the private list (--extra-terms) can never be excused.
 # * "@name" as the path covers the name check (repository, package and README title names).
-# * Every entry needs a reason a reviewer can check. Scope entries to data or UI files, or to the
+# * Every entry needs a reason. Scope entries to data or UI files, or to the
 #   one domain the project really links to. A funding file can never be allowlisted.
 # * Unused entries are reported as warnings; delete them.
 
