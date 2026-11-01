@@ -10,9 +10,9 @@
       `build_ignore` in `galaxy.yml`.
 - [ ] Licence: see [licenses/CHOOSING.md](licenses/CHOOSING.md).
 - [ ] Tests: replace `tests/` and set `test-command` in `ci.yml` and `release.yml` if needed.
-- [ ] Settings ([SETTINGS.md](https://github.com/luminare-dev/.github/blob/main/SETTINGS.md)):
-      required checks `ci / lint-test`, `secrets / gitleaks`, `pr / pr-title`, `DCO`; allow
-      Actions to create pull requests; immutable releases on.
+- [ ] Settings: required checks `ci / lint-test`, `secrets / gitleaks`, `pr / pr-title`, `DCO`
+      (the ruleset is in luminare-dev/.github `rulesets/main.json`); allow Actions to create pull
+      requests; immutable releases on.
 
 ## Before going public
 
