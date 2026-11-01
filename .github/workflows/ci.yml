@@ -1,5 +1,4 @@
-# Caller: lint, tests and the full-history secret scan on every pull request and push to main.
-# Required checks for the main ruleset: "ci / lint-test" and "secrets / gitleaks".
+# Lint, tests and secret scan. Required checks: "ci / lint-test", "secrets / gitleaks".
 name: ci
 
 on:
