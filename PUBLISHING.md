@@ -11,8 +11,8 @@
 - [ ] Licence: see [licenses/CHOOSING.md](licenses/CHOOSING.md).
 - [ ] Tests: replace `tests/` and set `test-command` in `ci.yml` and `release.yml` if needed.
 - [ ] Settings: required checks `ci / lint-test`, `secrets / gitleaks`, `pr / pr-title`, `DCO`
-      (the ruleset is in luminare-dev/.github `rulesets/main.json`); allow Actions to create pull
-      requests; immutable releases on.
+      (the ruleset is in luminare-dev/.github `rulesets/main.json`); allow Actions to create and
+      approve pull requests; allow auto-merge (dependabot-automerge.yml); immutable releases on.
 
 ## Before going public
 
